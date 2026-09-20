@@ -173,6 +173,11 @@ input[type=range]{width:100%;direction:ltr;accent-color:var(--lime);margin:6px 0
   .stage{grid-template-columns:minmax(340px,420px) 1fr;padding-bottom:30px;align-items:start;padding-top:24px}
   .tabs{display:none}
 }
+
+/* מסכים רחבים: הגדלת כל הדף כדי שלא ייראה קטן */
+@media (min-width:1100px){.stage{zoom:1.2}}
+@media (min-width:1400px) and (min-height:850px){.stage{zoom:1.4}}
+@media (min-width:1800px) and (min-height:1000px){.stage{zoom:1.6}}
 @media (prefers-reduced-motion:reduce){
   *{animation:none!important;transition:none!important}
 }
