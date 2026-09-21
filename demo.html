@@ -106,8 +106,8 @@ button,input,textarea{font:inherit;color:inherit}
 .explain p.xs{margin:0 0 4px;font-size:18px;font-weight:500;color:var(--mut)}
 .explain h2{font-size:34px}
 .xbar{height:8px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden;margin:18px 10px 6px}
-.xbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--lime));animation:fill4 4s linear forwards}
-@keyframes fill4{to{width:100%}}
+.xbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--lime));animation:fill6 6s linear forwards}
+@keyframes fill6{to{width:100%}}
 .instr{border:1px solid var(--amber-line);background:var(--amber-bg);border-radius:18px;padding:12px 14px;font-size:19px;line-height:1.45}
 
 /* ---------- HQ ---------- */
@@ -133,6 +133,12 @@ button,input,textarea{font:inherit;color:inherit}
 .hqnote{margin:12px 0 0;color:var(--mut);font-size:17px}
 .hq-actions{padding:14px 20px 4px;display:grid;gap:10px}
 .hq-actions .cta{font-size:20px;padding:17px 12px}
+.mgr{margin:12px 16px 6px;padding:14px 12px 16px;border:2px solid var(--yellow);border-radius:20px;background:rgba(250,204,21,.08);text-align:center}
+.mgr .m1{margin:0;font-size:26px;font-weight:900;color:var(--yellow)}
+.mgr .m2{margin:6px 0 4px;font-size:24px;font-weight:900;line-height:1.3}
+.mgr .m3{margin:4px 0 12px;font-size:18px;color:var(--mut);line-height:1.4}
+.mgr .cta{font-size:22px;padding:16px 12px}
+#lazy{font-size:21px;font-weight:700;color:#fff;padding:14px 8px;line-height:1.35}
 
 /* admin */
 .adv{margin-top:10px;font-size:14px;color:var(--mut)}
@@ -191,7 +197,7 @@ button,input,textarea{font:inherit;color:inherit}
           <div class="close">הקלפי נסגרת ב-22:00</div>
           <div class="sample">כתובת לדוגמה. מיקום הקלפי נשלף אוטומטית מרשימת הבוחרים של המפלגה.</div>
         </div>
-        <p class="setnote" id="reqNote" hidden>התרחק לפחות 40 מטר, ורק אז לחץ על האישור.</p>
+        <p class="setnote" id="reqNote" hidden>התרחק לפחות 25 מטר, ורק אז לחץ על האישור.</p>
         <div class="actions">
           <button class="cta" id="btnCommit" type="button">אני מאשר שאגיע להצביע</button>
         </div>
@@ -210,7 +216,7 @@ button,input,textarea{font:inherit;color:inherit}
           </svg>
           <p class="xs">מיקומך נקבע כקלפי וירטואלית.</p>
           <h2>עכשיו אתה הבוחר.</h2>
-          <p>התרחק לפחות 40 מטר, ורק אז לחץ על האישור בהודעה.</p>
+          <p>התרחק לפחות 25 מטר, ורק אז לחץ על האישור בהודעה.</p>
           <div class="xbar"><i></i></div>
         </div>
         <div class="brand">RTV – Real Time Voter · VoterTag™</div>
@@ -230,7 +236,7 @@ button,input,textarea{font:inherit;color:inherit}
           <div class="dir" id="dir" aria-live="polite"></div>
           <div class="meter"><i id="fill"></i></div>
           <div class="instr" id="tNote"></div>
-          <button class="linkbtn" id="lazy" type="button">בלי ללכת? הצג הדגמה</button>
+          <button class="linkbtn" id="lazy" type="button">לא בא לך ללכת? אפשר הדגמה וירטואלית</button>
         </div>
         <div class="brand">RTV – Real Time Voter · VoterTag™</div>
       </div>
@@ -251,7 +257,12 @@ button,input,textarea{font:inherit;color:inherit}
         </div>
         <div class="hq-actions">
           <a class="cta" id="shareWa" target="_blank" rel="noopener">שלח למטה שלך בוואטסאפ</a>
-          <a class="ghost" id="bizWa" target="_blank" rel="noopener" hidden>רוצה את זה בקמפיין שלך? דבר איתי</a>
+        </div>
+        <div class="mgr" id="mgr">
+          <p class="m1">רק למנהלי מטה!</p>
+          <p class="m2" id="m2" hidden>נותרו עוד <b class="days" id="dn2"></b> ימים!!!!</p>
+          <p class="m3">להדגמה חיה של המערכת המלאה, האמיתית, ולפרטים:</p>
+          <a class="cta" id="bizWa" target="_blank" rel="noopener" hidden>צרו קשר</a>
         </div>
         <p class="auto" id="autoTxt"></p>
         <button class="linkbtn" id="restart" type="button" hidden>חזרה למסך הראשי</button>
@@ -262,9 +273,9 @@ button,input,textarea{font:inherit;color:inherit}
     <div class="below" id="below">
       <p class="key">כדי שהמטה יידע שהגעת, השאר עמוד זה פתוח. אם הוא ייסגר, נשלח לך עוד 2 תזכורות במהלך היום.</p>
       <ul>
-        <li>התרחק מהקלפי הווירטואלית לפחות 40 מטר, ורק אז לחץ על האישור.</li>
+        <li>התרחק מהקלפי הווירטואלית לפחות 25 מטר, ורק אז לחץ על האישור.</li>
         <li>מומלץ, לא חובה, לצאת החוצה: מתחת לגג, המיקום פחות מדויק.</li>
-        <li>בסך הכול כדאי להיערך ל-80 מטר הליכה, כדקה וחצי.</li>
+        <li>בסך הכול כדאי להיערך ל-50 מטר הליכה, כדקה.</li>
         <li>המיקום שלך (הקלפי) משמש רק כדי לעדכן את המטה שהגעת.</li>
       </ul>
       <p class="fine" id="permHint" hidden>אם יופיע אישור מיקום, לחץ "אפשר".</p>
@@ -305,7 +316,7 @@ button,input,textarea{font:inherit;color:inherit}
 <script>
 (function(){
 "use strict";
-var AWAY=40, ENTRY=20, MIN_ACC=35, MAX_STATION_ACC=50, MOVE_MIN=8, AUTO_BACK=20, MIN_ELAPSED=15000;
+var AWAY=25, ENTRY=15, MIN_ACC=35, MAX_STATION_ACC=50, MOVE_MIN=8, AUTO_BACK=30, MIN_ELAPSED=15000;
 /* למילוי לפני ההפצה */
 var BIZ_NUMBER="972522531730";
 var VIDEO_URL="https://tinyurl.com/396xym4t";
@@ -432,7 +443,7 @@ function setNote(){
   if(S.mode==="sim"){
     t=S.stage==="away"?"מדגימים את ההליכה: מתרחקים מהקלפי הווירטואלית...":"מדגימים את ההליכה: חוזרים אל הקלפי הווירטואלית...";
   }else if(S.stage==="away"){
-    t="התרחק לפחות 40 מטר מהקלפי הווירטואלית, ואז חזור אליה.";
+    t="התרחק לפחות 25 מטר מהקלפי הווירטואלית, ואז חזור אליה.";
   }else{
     t="התרחקת מספיק. עכשיו חזור אל הקלפי הווירטואלית, המיקום שבו התחלת.";
   }
@@ -505,7 +516,7 @@ function showInterim(){
     var st=preStation();
     if(st){armReal(st.lat,st.lng);}else{S.armed=false;S.phase="msg";}
     goMessage();
-  },4000);
+  },6000);
 }
 /* the polling place is fixed; distance is tracked silently while the message is on screen */
 function armReal(lat,lng){
@@ -610,9 +621,8 @@ function showHQ(self){
     var sp=document.createElement("span");sp.textContent=r[1];if(r[2]){sp.className=r[2];}
     li.appendChild(t);li.appendChild(sp);ul.appendChild(li);
   });
-  var url=SHARE_URL||location.href;
-  var txt="ככה נראית ההודעה שהבוחר מקבל בבוקר יום הבחירות:\n\n"+fullMessage()+
-          "\n\nוכך המטה רואה שהוא הגיע. אפשר לנסות בעצמך: "+url;
+  var url=SHARE_URL||location.href.split(/[?#]/)[0];
+  var txt="מצאתי פתרון טכנולוגי יעיל ל\"בינגו\" ולרשום בוחרים.\nיש הדגמה חיה מקוצרת ב:\n"+url;
   $("#shareWa").href="https://wa.me/?text="+encodeURIComponent(txt);
   show("hq");
   startAuto();
@@ -682,7 +692,7 @@ $("#hq").addEventListener("pointerdown",function(){if(autoT){cancelAuto(false);}
 (function init(){
   var today=new Date(),mid=new Date(today.getFullYear(),today.getMonth(),today.getDate());
   var n=Math.round((ELECTION-mid)/86400000);
-  if(n>0){$("#dn").textContent=n;$("#hlDays").hidden=false;}
+  if(n>0){$("#dn").textContent=n;$("#hlDays").hidden=false;$("#dn2").textContent=n;$("#m2").hidden=false;}
   $("#permHint").hidden=!mobile;
   $("#vid").href=VIDEO_URL;
   if(BIZ_NUMBER){
