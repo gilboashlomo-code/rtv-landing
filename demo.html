@@ -291,7 +291,7 @@ var S=null,seq=0,AC=null,autoT=null;
 
 function $(s){return document.querySelector(s);}
 function fresh(){return {mode:"real",stage:"away",d:0,ref:null,maxD:AWAY,entered:false,phase:"msg",station:null,
-  watchId:null,wake:null,tween:null,timer:null,moveTimer:null,moved:false,cnt:0,t:null,tStart:0,accBad:false};}
+  watchId:null,wake:null,tween:null,timer:null,moveTimer:null,maxDD:0,goodN:0,prevDD:null,cnt:0,t:null,tStart:0};}
 S=fresh();
 function hasName(){return cfg.name.trim().length>0;}
 function nm(){return hasName()?cfg.name.trim():"ישראל אנונימוס";}
@@ -438,17 +438,20 @@ function realStart(){
     if(my!==seq){return;}
     clearTimeout(dog);cleanup();resetBtn();
     S.station={lat:p.coords.latitude,lng:p.coords.longitude};
-    S.mode="real";S.stage="away";S.d=0;S.ref=0;S.maxD=AWAY;S.cnt=0;S.moved=false;S.accBad=false;S.entered=false;
+    S.mode="real";S.stage="away";S.d=0;S.ref=0;S.maxD=AWAY;S.cnt=0;S.maxDD=0;S.goodN=0;S.prevDD=null;S.entered=false;
     S.tStart=Date.now();
     beginTracking();
-    S.moveTimer=setTimeout(function(){
-      if(S.mode==="real"&&S.phase==="track"&&!S.entered&&!S.moved){goSim(true);}
-    },22000);
+    S.moveTimer=setInterval(function(){
+      if(S.mode!=="real"||S.phase!=="track"||S.entered||S.stage!=="away"){return;}
+      var el=Date.now()-S.tStart;
+      if((el>=15000&&S.goodN>=4&&S.maxDD<5)||(el>=45000&&S.maxDD<10)||(el>=90000&&S.maxDD<25)){goSim(true);}
+    },1000);
     S.watchId=navigator.geolocation.watchPosition(function(q){
       if(S.mode!=="real"||S.phase!=="track"){return;}
       var k=111320,dx=(q.coords.longitude-S.station.lng)*k*Math.cos(S.station.lat*Math.PI/180),
           dy=(q.coords.latitude-S.station.lat)*k,dd=Math.sqrt(dx*dx+dy*dy);
-      if(q.coords.accuracy<=MIN_ACC&&dd>=MOVE_MIN){S.moved=true;}
+      if(q.coords.accuracy<=100&&dd>S.maxDD){S.maxDD=dd;}
+      if(q.coords.accuracy<=25){S.goodN++;}
       update(dd,false,q.coords.accuracy);
     },function(){},{enableHighAccuracy:true,maximumAge:2000,timeout:20000});
     try{if(navigator.wakeLock){navigator.wakeLock.request("screen").then(function(w){S.wake=w;}).catch(function(){});}}catch(e){}
@@ -485,11 +488,13 @@ function goSim(auto){
 
 /* ---------- התרחקות וחזרה ---------- */
 function update(d,trusted,acc){
+  var prev=S.prevDD;S.prevDD=d;
   S.d=d;
   if(S.stage==="back"&&d>S.maxD){S.maxD=d;}
   renderTrack();
   if(S.phase!=="track"||S.entered){return;}
   var good=trusted||(acc!==undefined&&acc<=MIN_ACC);
+  if(!trusted&&prev!==null&&Math.abs(d-prev)>30){return;}
   if(S.stage==="away"){
     if(d>=AWAY){
       if(good){S.cnt++;}
@@ -594,7 +599,7 @@ function stopWatch(){
 function stopAll(){
   cancelTween();
   if(S.timer){clearTimeout(S.timer);S.timer=null;}
-  if(S.moveTimer){clearTimeout(S.moveTimer);S.moveTimer=null;}
+  if(S.moveTimer){clearInterval(S.moveTimer);clearTimeout(S.moveTimer);S.moveTimer=null;}
   stopWatch();
 }
 function restart(){
