@@ -248,7 +248,7 @@ button,input,textarea{font:inherit;color:inherit}
         <li>בסך הכול כדאי להיערך ל-80 מטר הליכה, כדקה וחצי.</li>
         <li>המיקום שלך (הקלפי) משמש רק כדי לעדכן את המטה שהגעת.</li>
       </ul>
-      <p class="fine" id="permHint" hidden>בלחיצה יופיע בטלפון אישור מיקום. לחץ "אפשר".</p>
+      <p class="fine" id="permHint" hidden>אם יופיע אישור מיקום, לחץ "אפשר".</p>
       <button class="linkbtn" id="btnVoted" type="button">כבר הצבעתי</button>
       <p class="disc">ההדגמה האישית פועלת, כרגע, רק בטלפוני אנדרואיד (סמסונג, שיאומי ועוד).</p>
     </div>
@@ -287,7 +287,7 @@ button,input,textarea{font:inherit;color:inherit}
 <script>
 (function(){
 "use strict";
-var AWAY=40, ENTRY=20, MIN_ACC=35, MAX_STATION_ACC=50, MOVE_MIN=15, AUTO_BACK=20;
+var AWAY=40, ENTRY=20, MIN_ACC=35, MAX_STATION_ACC=50, MOVE_MIN=15, AUTO_BACK=20, MIN_ELAPSED=15000;
 /* למילוי לפני ההפצה */
 var BIZ_NUMBER="972522531730";
 var VIDEO_URL="https://tinyurl.com/396xym4t";
@@ -297,14 +297,15 @@ var SAMPLE_AD="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBA
 var BTN_TXT="אני מאשר שאגיע להצביע";
 var android=/Android/i.test(navigator.userAgent);
 var admin=location.hash==="#admin";
-var allowed=android||admin;
-var mobile=android;
+var iosTest=location.hash==="#ios";
+var allowed=android||admin||iosTest;
+var mobile=android||iosTest;
 var cfg={name:"",sender:"המנהיג",msg:"מבקשים ממך לצאת ולהצביע היום.",hl:"כל קול קובע.",ad:SAMPLE_AD,custom:false};
 var S=null,seq=0,AC=null,autoT=null;
 
 function $(s){return document.querySelector(s);}
 function fresh(){return {mode:"real",stage:"away",d:0,ref:null,maxD:AWAY,entered:false,phase:"msg",station:null,
-  watchId:null,wake:null,tween:null,timer:null,moveTimer:null,moved:false,cnt:0,t:null,accBad:false};}
+  watchId:null,wake:null,tween:null,timer:null,moveTimer:null,moved:false,cnt:0,t:null,tStart:0,accBad:false};}
 S=fresh();
 function hasName(){return cfg.name.trim().length>0;}
 function nm(){return hasName()?cfg.name.trim():"ישראל אנונימוס";}
@@ -438,40 +439,49 @@ function realFail(){
 }
 function realStart(){
   var b=$("#btnCommit");
-  var my=++seq;
+  var my=++seq,tmpWatch=null;
+  function cleanup(){
+    if(tmpWatch!==null){try{navigator.geolocation.clearWatch(tmpWatch);}catch(e){}tmpWatch=null;}
+  }
   b.disabled=true;b.textContent="מאתר מיקום...";
   if(!navigator.geolocation){resetBtn();realFail();return;}
   var dog=setTimeout(function(){
     if(my!==seq){return;}
-    seq++;resetBtn();realFail();
-  },12000);
+    seq++;cleanup();resetBtn();realFail();
+  },20000);
+  function accept(p){
+    if(my!==seq){return;}
+    clearTimeout(dog);cleanup();resetBtn();
+    S.station={lat:p.coords.latitude,lng:p.coords.longitude};
+    S.mode="real";S.stage="away";S.d=0;S.ref=0;S.maxD=AWAY;S.cnt=0;S.moved=false;S.accBad=false;S.entered=false;
+    S.tStart=Date.now();
+    beginTracking();
+    S.moveTimer=setTimeout(function(){
+      if(S.mode==="real"&&S.phase==="track"&&!S.entered&&!S.moved){goSim(true);}
+    },15000);
+    S.watchId=navigator.geolocation.watchPosition(function(q){
+      if(S.mode!=="real"||S.phase!=="track"){return;}
+      var k=111320,dx=(q.coords.longitude-S.station.lng)*k*Math.cos(S.station.lat*Math.PI/180),
+          dy=(q.coords.latitude-S.station.lat)*k,dd=Math.sqrt(dx*dx+dy*dy);
+      if(q.coords.accuracy<=MIN_ACC&&dd>=MOVE_MIN){S.moved=true;}
+      update(dd,false,q.coords.accuracy);
+    },function(){},{enableHighAccuracy:true,maximumAge:2000,timeout:20000});
+    try{if(navigator.wakeLock){navigator.wakeLock.request("screen").then(function(w){S.wake=w;}).catch(function(){});}}catch(e){}
+  }
   try{
     navigator.geolocation.getCurrentPosition(function(p){
       if(my!==seq){return;}
-      clearTimeout(dog);resetBtn();
-      if(p.coords.accuracy>MAX_STATION_ACC){seq++;realFail();return;}
-      S.station={lat:p.coords.latitude,lng:p.coords.longitude};
-      S.mode="real";S.stage="away";S.d=0;S.ref=0;S.maxD=AWAY;S.cnt=0;S.moved=false;S.accBad=false;S.entered=false;
-      beginTracking();
-      S.moveTimer=setTimeout(function(){
-        if(S.mode==="real"&&S.phase==="track"&&!S.entered&&!S.moved){
-          goSim(true);
-        }
-      },15000);
-      S.watchId=navigator.geolocation.watchPosition(function(q){
-        if(S.mode!=="real"||S.phase!=="track"){return;}
-        var k=111320,dx=(q.coords.longitude-S.station.lng)*k*Math.cos(S.station.lat*Math.PI/180),
-            dy=(q.coords.latitude-S.station.lat)*k,dd=Math.sqrt(dx*dx+dy*dy);
-        if(q.coords.accuracy<=MIN_ACC&&dd>=MOVE_MIN){S.moved=true;}
-        update(dd,false,q.coords.accuracy);
-      },function(){},{enableHighAccuracy:true,maximumAge:2000,timeout:20000});
-      try{if(navigator.wakeLock){navigator.wakeLock.request("screen").then(function(w){S.wake=w;}).catch(function(){});}}catch(e){}
-    },function(err){
+      if(p.coords.accuracy<=MAX_STATION_ACC){accept(p);return;}
+      b.textContent="משפר דיוק מיקום...";
+      tmpWatch=navigator.geolocation.watchPosition(function(q){
+        if(my!==seq){return;}
+        if(q.coords.accuracy<=MAX_STATION_ACC){accept(q);}
+      },function(){},{enableHighAccuracy:true,maximumAge:0,timeout:20000});
+    },function(){
       if(my!==seq){return;}
-      clearTimeout(dog);seq++;resetBtn();
-      realFail();
+      clearTimeout(dog);cleanup();seq++;resetBtn();realFail();
     },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
-  }catch(e){clearTimeout(dog);seq++;resetBtn();realFail();}
+  }catch(e){clearTimeout(dog);cleanup();seq++;resetBtn();realFail();}
 }
 function goSim(auto){
   seq++;
@@ -502,6 +512,7 @@ function update(d,trusted,acc){
     }else if(good){S.cnt=0;}
   }else{
     if(d<=ENTRY){
+      if(!trusted&&Date.now()-S.tStart<MIN_ELAPSED){return;}
       if(good){S.cnt++;}
       if(trusted||S.cnt>=2){onEntry();}
     }else if(good){S.cnt=0;}
