@@ -99,6 +99,13 @@ button,input,textarea{font:inherit;color:inherit}
 .dir.far{color:var(--red)}
 .meter{height:12px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden;margin:4px 0 14px}
 .meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--lime));transition:width .3s linear}
+.explain{padding:22px 20px 14px;text-align:center}
+.explain .ballot{width:46%;max-width:170px;margin:4px auto 10px}
+.explain h2{margin:0;font-size:28px;font-weight:900;line-height:1.25}
+.explain p{margin:10px 0 0;font-size:24px;font-weight:900;color:var(--yellow);line-height:1.3}
+.xbar{height:8px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden;margin:18px 10px 6px}
+.xbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--lime));animation:fill4 4s linear forwards}
+@keyframes fill4{to{width:100%}}
 .instr{border:1px solid var(--amber-line);background:var(--amber-bg);border-radius:18px;padding:12px 14px;font-size:19px;line-height:1.45}
 
 /* ---------- HQ ---------- */
@@ -189,6 +196,23 @@ button,input,textarea{font:inherit;color:inherit}
         <div class="brand">RTV – Real Time Voter · VoterTag™</div>
       </div>
 
+      <div class="screen" id="explain">
+        <div class="explain">
+          <svg class="ballot" viewBox="0 0 200 170" role="img" aria-label="קלפי">
+            <rect x="34" y="72" width="132" height="88" rx="8" fill="#2b6fd6"/>
+            <rect x="34" y="72" width="132" height="18" rx="8" fill="#4b8ff0"/>
+            <rect x="64" y="78" width="72" height="6" rx="3" fill="#0b1f4d"/>
+            <g transform="translate(100 16) rotate(-7)"><rect x="-27" y="0" width="54" height="72" rx="5" fill="#fff"/><rect x="-19" y="10" width="38" height="7" rx="2" fill="#0b1f4d"/><rect x="-19" y="24" width="26" height="5" rx="2" fill="#9aa3b5"/><rect x="-19" y="34" width="30" height="5" rx="2" fill="#9aa3b5"/></g>
+            <circle cx="100" cy="125" r="20" fill="#fff"/>
+            <path d="M89 125l8 9 15-19" fill="none" stroke="#22a34a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <h2>מיקומך נקבע כקלפי וירטואלית.</h2>
+          <p>עכשיו התרחק ממנה 40 מטר.</p>
+          <div class="xbar"><i></i></div>
+        </div>
+        <div class="brand">RTV – Real Time Voter · VoterTag™</div>
+      </div>
+
       <div class="screen" id="track">
         <div class="track">
           <p class="topline"><span class="who" id="tName"></span>: המרחק שלך לקלפי הוא <span class="dist"><span id="num">0</span> מטרים</span></p>
@@ -203,6 +227,7 @@ button,input,textarea{font:inherit;color:inherit}
           <div class="dir" id="dir" aria-live="polite"></div>
           <div class="meter"><i id="fill"></i></div>
           <div class="instr" id="tNote"></div>
+          <button class="linkbtn" id="lazy" type="button">בלי ללכת? הצג הדגמה</button>
         </div>
         <div class="brand">RTV – Real Time Voter · VoterTag™</div>
       </div>
@@ -303,7 +328,7 @@ function show(id){
   var a=document.querySelectorAll(".screen");
   for(var i=0;i<a.length;i++){a[i].classList.remove("on");}
   $("#"+id).classList.add("on");
-  $("#flow").setAttribute("data-stage",(id==="track"||id==="hq")?id:"msg");
+  $("#flow").setAttribute("data-stage",id==="explain"?"track":((id==="track"||id==="hq")?id:"msg"));
 }
 
 /* ---------- הגדרות והודעה ---------- */
@@ -394,6 +419,7 @@ function selfVoted(){
 function beginTracking(){
   S.phase="track";
   $("#tName").textContent=nm();
+  $("#lazy").hidden=S.mode!=="real";
   $("#dir").textContent="";$("#dir").className="dir";
   setNote();
   renderTrack();
@@ -404,7 +430,7 @@ function setNote(){
   if(S.mode==="sim"){
     t=S.stage==="away"?"מדגימים את ההליכה: מתרחקים מהקלפי הווירטואלית...":"מדגימים את ההליכה: חוזרים אל הקלפי הווירטואלית...";
   }else if(S.stage==="away"){
-    t="קבענו את מיקומך הנוכחי כקלפי הווירטואלית. עכשיו עליך להתרחק לפחות 40 מטר כדי לדמות אותך כבוחר חי וקיים, ולהתחיל לחזור לנקודת הקלפי הווירטואלית (המיקום הקודם שלך).";
+    t="התרחק לפחות 40 מטר מהקלפי הווירטואלית, ואז חזור אליה: זה המקום שבו עמדת בלחיצה על האישור.";
   }else{
     t="התרחקת מספיק. עכשיו חזור אל הקלפי הווירטואלית, המיקום שבו התחלת.";
   }
@@ -433,12 +459,13 @@ function beginReal(lat,lng){
   S.station={lat:lat,lng:lng};
   S.mode="real";S.stage="away";S.d=0;S.ref=0;S.maxD=AWAY;S.cnt=0;S.maxDD=0;S.goodN=0;S.nUse=0;S.sm=null;S.prevDD=null;S.entered=false;
   S.tStart=Date.now();
-  beginTracking();
-  S.moveTimer=setInterval(function(){
-    if(S.mode!=="real"||S.phase!=="track"||S.entered||S.stage!=="away"){return;}
-    var el=Date.now()-S.tStart;
-    if((el>=40000&&S.nUse===0)||(el>=40000&&S.goodN>=4&&S.maxDD<10)||(el>=60000&&S.maxDD<10)){goSim(true);}
-  },1000);
+  S.phase="explain";
+  show("explain");
+  S.timer=setTimeout(function(){
+    S.timer=null;
+    if(S.phase!=="explain"){return;}
+    beginTracking();
+  },4000);
   S.watchId=navigator.geolocation.watchPosition(function(q){
     if(S.mode!=="real"||S.phase!=="track"){return;}
     if(q.coords.accuracy>60){return;}
@@ -446,8 +473,6 @@ function beginReal(lat,lng){
         dy=(q.coords.latitude-S.station.lat)*k,dd=Math.sqrt(dx*dx+dy*dy);
     S.nUse++;
     S.sm=(S.sm===null)?dd:(0.5*S.sm+0.5*dd);
-    if(S.sm>S.maxDD){S.maxDD=S.sm;}
-    if(q.coords.accuracy<=25){S.goodN++;}
     update(S.sm,false,q.coords.accuracy);
   },function(){},{enableHighAccuracy:true,maximumAge:2000,timeout:20000});
   try{if(navigator.wakeLock){navigator.wakeLock.request("screen").then(function(w){S.wake=w;}).catch(function(){});}}catch(e){}
@@ -660,6 +685,7 @@ function restart(){
 $("#btnCommit").addEventListener("click",commit);
 $("#btnVoted").addEventListener("click",selfVoted);
 $("#restart").addEventListener("click",restart);
+$("#lazy").addEventListener("click",function(){goSim(true);});
 $("#hq").addEventListener("pointerdown",function(){if(autoT){cancelAuto(false);}});
 (function init(){
   var today=new Date(),mid=new Date(today.getFullYear(),today.getMonth(),today.getDate());
