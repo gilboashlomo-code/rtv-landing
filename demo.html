@@ -103,6 +103,8 @@ button,input,textarea{font:inherit;color:inherit}
 .explain .ballot{width:46%;max-width:170px;margin:4px auto 10px}
 .explain h2{margin:0;font-size:28px;font-weight:900;line-height:1.25}
 .explain p{margin:10px 0 0;font-size:24px;font-weight:900;color:var(--yellow);line-height:1.3}
+.explain p.xs{margin:0 0 4px;font-size:18px;font-weight:500;color:var(--mut)}
+.explain h2{font-size:34px}
 .xbar{height:8px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden;margin:18px 10px 6px}
 .xbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--lime));animation:fill4 4s linear forwards}
 @keyframes fill4{to{width:100%}}
@@ -189,7 +191,7 @@ button,input,textarea{font:inherit;color:inherit}
           <div class="close">הקלפי נסגרת ב-22:00</div>
           <div class="sample">כתובת לדוגמה. מיקום הקלפי נשלף אוטומטית מרשימת הבוחרים של המפלגה.</div>
         </div>
-        <p class="setnote" id="preNote" hidden>הקלפי הווירטואלית נקבעה במקום שבו אתה עומד.</p>
+        <p class="setnote" id="reqNote" hidden>התרחק לפחות 40 מטר, ורק אז לחץ על האישור.</p>
         <div class="actions">
           <button class="cta" id="btnCommit" type="button">אני מאשר שאגיע להצביע</button>
         </div>
@@ -206,8 +208,9 @@ button,input,textarea{font:inherit;color:inherit}
             <circle cx="100" cy="125" r="20" fill="#fff"/>
             <path d="M89 125l8 9 15-19" fill="none" stroke="#22a34a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <h2>מיקומך נקבע כקלפי וירטואלית.</h2>
-          <p>עכשיו התרחק ממנה 40 מטר.</p>
+          <p class="xs">מיקומך נקבע כקלפי וירטואלית.</p>
+          <h2>עכשיו אתה הבוחר.</h2>
+          <p>התרחק לפחות 40 מטר, ורק אז לחץ על האישור בהודעה.</p>
           <div class="xbar"><i></i></div>
         </div>
         <div class="brand">RTV – Real Time Voter · VoterTag™</div>
@@ -259,7 +262,7 @@ button,input,textarea{font:inherit;color:inherit}
     <div class="below" id="below">
       <p class="key">כדי שהמטה יידע שהגעת, השאר עמוד זה פתוח. אם הוא ייסגר, נשלח לך עוד 2 תזכורות במהלך היום.</p>
       <ul>
-        <li>אחרי האישור תתבקש להתרחק לפחות 40 מטר מהקלפי הווירטואלית, כדי לדמות בוחר בדרכו לקלפי.</li>
+        <li>התרחק מהקלפי הווירטואלית לפחות 40 מטר, ורק אז לחץ על האישור.</li>
         <li>מומלץ, לא חובה, לצאת החוצה: מתחת לגג, המיקום פחות מדויק.</li>
         <li>בסך הכול כדאי להיערך ל-80 מטר הליכה, כדקה וחצי.</li>
         <li>המיקום שלך (הקלפי) משמש רק כדי לעדכן את המטה שהגעת.</li>
@@ -318,7 +321,7 @@ var S=null,seq=0,AC=null,autoT=null;
 
 function $(s){return document.querySelector(s);}
 function fresh(){return {mode:"real",stage:"away",d:0,ref:null,maxD:AWAY,entered:false,phase:"msg",station:null,
-  watchId:null,preWatch:null,buf:[],wake:null,tween:null,timer:null,moveTimer:null,maxDD:0,goodN:0,nUse:0,sm:null,prevDD:null,cnt:0,t:null,tStart:0};}
+  armed:false,confirmed:false,locT:null,watchId:null,preWatch:null,buf:[],wake:null,tween:null,timer:null,moveTimer:null,maxDD:0,goodN:0,nUse:0,sm:null,prevDD:null,cnt:0,t:null,tStart:0};}
 S=fresh();
 function hasName(){return cfg.name.trim().length>0;}
 function nm(){return hasName()?cfg.name.trim():"ישראל אנונימוס";}
@@ -366,11 +369,8 @@ $("#inFile").addEventListener("change",function(e){
 
 /* ---------- מסך ראשון -> הודעה ---------- */
 $("#start").addEventListener("click",function(){
-  readCfg();fillMsg();unlockAudio();prefetch();
-  $("#landing").hidden=true;
-  $("#flow").hidden=false;
-  show("msg");
-  try{window.scrollTo({top:0});}catch(e){}
+  readCfg();fillMsg();unlockAudio();
+  if(mobile&&navigator.geolocation){locate();}else{goMessage();}
 });
 
 /* ---------- אישור ---------- */
@@ -403,10 +403,12 @@ function commit(){
   readCfg();
   unlockAudio();
   S.tConfirm=new Date();
-  if(mobile){
-    var st=preStation();
-    if(st){seq++;beginReal(st.lat,st.lng);}else{realStart();}
-  }else{goSim(true);}
+  if(S.armed&&S.mode==="real"){
+    S.confirmed=true;
+    if(S.stage==="away"&&S.d>=AWAY){S.stage="back";S.cnt=0;S.maxD=Math.max(S.d,AWAY);}
+    beginTracking();
+  }
+  else{goSim(true);}
 }
 function selfVoted(){
   readCfg();
@@ -430,7 +432,7 @@ function setNote(){
   if(S.mode==="sim"){
     t=S.stage==="away"?"מדגימים את ההליכה: מתרחקים מהקלפי הווירטואלית...":"מדגימים את ההליכה: חוזרים אל הקלפי הווירטואלית...";
   }else if(S.stage==="away"){
-    t="התרחק לפחות 40 מטר מהקלפי הווירטואלית, ואז חזור אליה: זה המקום שבו עמדת בלחיצה על האישור.";
+    t="התרחק לפחות 40 מטר מהקלפי הווירטואלית, ואז חזור אליה.";
   }else{
     t="התרחקת מספיק. עכשיו חזור אל הקלפי הווירטואלית, המיקום שבו התחלת.";
   }
@@ -451,46 +453,13 @@ function renderTrack(){
     S.ref=d;
   }
 }
-function realFail(){
-  goSim(true);
-}
-function beginReal(lat,lng){
-  cancelPrefetch();
-  S.station={lat:lat,lng:lng};
-  S.mode="real";S.stage="away";S.d=0;S.ref=0;S.maxD=AWAY;S.cnt=0;S.maxDD=0;S.goodN=0;S.nUse=0;S.sm=null;S.prevDD=null;S.entered=false;
-  S.tStart=Date.now();
-  S.phase="explain";
-  show("explain");
-  S.timer=setTimeout(function(){
-    S.timer=null;
-    if(S.phase!=="explain"){return;}
-    beginTracking();
-  },4000);
-  S.watchId=navigator.geolocation.watchPosition(function(q){
-    if(S.mode!=="real"||S.phase!=="track"){return;}
-    if(q.coords.accuracy>60){return;}
-    var k=111320,dx=(q.coords.longitude-S.station.lng)*k*Math.cos(S.station.lat*Math.PI/180),
-        dy=(q.coords.latitude-S.station.lat)*k,dd=Math.sqrt(dx*dx+dy*dy);
-    S.nUse++;
-    S.sm=(S.sm===null)?dd:(0.5*S.sm+0.5*dd);
-    update(S.sm,false,q.coords.accuracy);
-  },function(){},{enableHighAccuracy:true,maximumAge:2000,timeout:20000});
-  try{if(navigator.wakeLock){navigator.wakeLock.request("screen").then(function(w){S.wake=w;}).catch(function(){});}}catch(e){}
-}
-/* ---- location warm-up on the first tap ---- */
-function prefetch(){
-  cancelPrefetch();
-  S.buf=[];
-  $("#preNote").hidden=true;
-  if(!mobile||!navigator.geolocation){return;}
-  try{
-    S.preWatch=navigator.geolocation.watchPosition(function(p){
-      if(p.coords.accuracy>MAX_STATION_ACC){return;}
-      S.buf.push({lat:p.coords.latitude,lng:p.coords.longitude,t:Date.now()});
-      if(S.buf.length>5){S.buf.shift();}
-      $("#preNote").hidden=false;
-    },function(){},{enableHighAccuracy:true,maximumAge:0,timeout:20000});
-  }catch(e){}
+var START_HTML='התחל הדגמה חיה<small>קובע את מיקומך הנוכחי כקלפי הווירטואלית</small>';
+function setStartBusy(b){var e=$("#start");e.disabled=b;e.innerHTML=b?"מאתר מיקום...":START_HTML;}
+function goMessage(){
+  $("#landing").hidden=true;$("#flow").hidden=false;
+  $("#reqNote").hidden=!S.armed;
+  show("msg");
+  try{window.scrollTo({top:0});}catch(e){}
 }
 function cancelPrefetch(){
   if(S.preWatch!==null&&S.preWatch!==undefined&&navigator.geolocation){try{navigator.geolocation.clearWatch(S.preWatch);}catch(e){}}
@@ -503,37 +472,57 @@ function preStation(){
   a.forEach(function(f){la+=f.lat;lo+=f.lng;});
   return {lat:la/a.length,lng:lo/a.length};
 }
-function realStart(){
-  var b=$("#btnCommit");
-  var my=++seq,tmpWatch=null;
-  function cleanup(){
-    if(tmpWatch!==null){try{navigator.geolocation.clearWatch(tmpWatch);}catch(e){}tmpWatch=null;}
+/* first tap: ask for location. usable fix -> "now you are the voter"; anything else -> the message, auto demo on confirm */
+function locate(){
+  cancelPrefetch();
+  S.buf=[];
+  var done=false;
+  function ready(ok){
+    if(done){return;}
+    done=true;
+    if(S.locT){clearTimeout(S.locT);S.locT=null;}
+    setStartBusy(false);
+    if(ok){showInterim();}else{cancelPrefetch();goMessage();}
   }
-  b.disabled=true;b.textContent="מאתר מיקום...";
-  if(!navigator.geolocation){resetBtn();realFail();return;}
-  var dog=setTimeout(function(){
-    if(my!==seq){return;}
-    seq++;cleanup();resetBtn();realFail();
-  },10000);
-  function accept(p){
-    if(my!==seq){return;}
-    clearTimeout(dog);cleanup();resetBtn();
-    beginReal(p.coords.latitude,p.coords.longitude);
-  }
+  setStartBusy(true);
+  S.locT=setTimeout(function(){ready(false);},10000);
   try{
-    navigator.geolocation.getCurrentPosition(function(p){
-      if(my!==seq){return;}
-      if(p.coords.accuracy<=MAX_STATION_ACC){accept(p);return;}
-      b.textContent="משפר דיוק מיקום...";
-      tmpWatch=navigator.geolocation.watchPosition(function(q){
-        if(my!==seq){return;}
-        if(q.coords.accuracy<=MAX_STATION_ACC){accept(q);}
-      },function(){},{enableHighAccuracy:true,maximumAge:0,timeout:20000});
-    },function(){
-      if(my!==seq){return;}
-      clearTimeout(dog);cleanup();seq++;resetBtn();realFail();
-    },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
-  }catch(e){clearTimeout(dog);cleanup();seq++;resetBtn();realFail();}
+    S.preWatch=navigator.geolocation.watchPosition(function(p){
+      if(p.coords.accuracy>MAX_STATION_ACC){return;}
+      S.buf.push({lat:p.coords.latitude,lng:p.coords.longitude,t:Date.now()});
+      if(S.buf.length>5){S.buf.shift();}
+      ready(true);
+    },function(){ready(false);},{enableHighAccuracy:true,maximumAge:0,timeout:20000});
+  }catch(e){ready(false);}
+}
+function showInterim(){
+  S.phase="interim";
+  $("#landing").hidden=true;$("#flow").hidden=false;
+  show("explain");
+  S.timer=setTimeout(function(){
+    S.timer=null;
+    if(S.phase!=="interim"){return;}
+    var st=preStation();
+    if(st){armReal(st.lat,st.lng);}else{S.armed=false;S.phase="msg";}
+    goMessage();
+  },4000);
+}
+/* the polling place is fixed; distance is tracked silently while the message is on screen */
+function armReal(lat,lng){
+  cancelPrefetch();
+  S.station={lat:lat,lng:lng};
+  S.mode="real";S.stage="away";S.d=0;S.ref=0;S.maxD=AWAY;S.cnt=0;S.maxDD=0;S.goodN=0;S.nUse=0;S.sm=null;S.prevDD=null;S.entered=false;
+  S.armed=true;S.confirmed=false;S.tStart=Date.now();S.phase="msg";
+  S.watchId=navigator.geolocation.watchPosition(function(q){
+    if(S.mode!=="real"||(S.phase!=="track"&&S.phase!=="msg")){return;}
+    if(q.coords.accuracy>60){return;}
+    var k=111320,dx=(q.coords.longitude-S.station.lng)*k*Math.cos(S.station.lat*Math.PI/180),
+        dy=(q.coords.latitude-S.station.lat)*k,dd=Math.sqrt(dx*dx+dy*dy);
+    S.nUse++;
+    S.sm=(S.sm===null)?dd:(0.5*S.sm+0.5*dd);
+    update(S.sm,false,q.coords.accuracy);
+  },function(){},{enableHighAccuracy:true,maximumAge:2000,timeout:20000});
+  try{if(navigator.wakeLock){navigator.wakeLock.request("screen").then(function(w){S.wake=w;}).catch(function(){});}}catch(e){}
 }
 function goSim(auto){
   seq++;
@@ -556,7 +545,7 @@ function update(d,trusted,acc){
   S.d=d;
   if(S.stage==="back"&&d>S.maxD){S.maxD=d;}
   renderTrack();
-  if(S.phase!=="track"||S.entered){return;}
+  if((S.phase!=="track"&&S.phase!=="msg")||S.entered){return;}
   var good=trusted||(acc!==undefined&&acc<=MIN_ACC);
   if(!trusted&&prev!==null&&Math.abs(d-prev)>30){return;}
   if(S.stage==="away"){
@@ -566,6 +555,7 @@ function update(d,trusted,acc){
     }else if(good){S.cnt=0;}
   }else{
     if(d<=ENTRY){
+      if(!trusted&&!S.confirmed){return;}
       if(!trusted&&Date.now()-S.tStart<MIN_ELAPSED){return;}
       if(good){S.cnt++;}
       if(trusted||S.cnt>=2){onEntry();}
@@ -577,7 +567,7 @@ function onEntry(){
   cancelTween();
   stopWatch();
   S.t=new Date();
-  $("#adTitle").textContent="הגעת לקלפי"+tail()+"!";
+  $("#adTitle").textContent="תודה שבאת להצביע, "+nm()+"!";
   $("#adTag").textContent=cfg.custom?"התוכן שהעלית":"תוכן לדוגמה להדגמה בלבד";
   $("#adImg").src=cfg.ad;
   $("#ovAd").classList.add("on");
@@ -661,6 +651,7 @@ function stopWatch(){
   if(S.wake){try{S.wake.release();}catch(e){}S.wake=null;}
 }
 function stopAll(){
+  if(S.locT){clearTimeout(S.locT);S.locT=null;}
   cancelPrefetch();
   cancelTween();
   if(S.timer){clearTimeout(S.timer);S.timer=null;}
@@ -674,6 +665,7 @@ function restart(){
   $("#ovAd").classList.remove("on");
   resetBtn();
   S=fresh();
+  setStartBusy(false);
   fillMsg();
   show("msg");
   $("#flow").hidden=true;
